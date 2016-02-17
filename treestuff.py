@@ -71,3 +71,25 @@ print_tree(simpletree, itemgetter(0), itemgetter(1), levelorder)
 print_tree(xdoc, lambda node: node.get('value'), iter, preorder)
 print_tree(xdoc, lambda node: node.get('value'), iter, postorder)
 print_tree(xdoc, lambda node: node.get('value'), iter, levelorder)
+
+# Just to verify that it's flexible enough: what if I wanted a tree
+# that didn't directly hold its children, but instead used a next-sibling
+# pointer?
+Node = collections.namedtuple('Node', 'value first_child next_sibling')
+node3 = Node(3, None, None)
+node5 = Node(5, None, None)
+node4 = Node(4, None, node5)
+node2 = Node(2, node4, node3)
+root = Node(1, node2, None)
+
+# Now the children function isn't quite trivial enough to write as a
+# lambda in the function call, but still, pretty simple:
+def children(node):
+    node = node.first_child
+    while node:
+        yield node
+        node = node.next_sibling
+
+print_tree(root, attrgetter('value'), children, preorder)
+print_tree(root, attrgetter('value'), children, postorder)
+print_tree(root, attrgetter('value'), children, levelorder)
