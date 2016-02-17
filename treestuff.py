@@ -1,3 +1,4 @@
+from abc import *
 import collections
 from operator import attrgetter, itemgetter
 
@@ -93,3 +94,81 @@ def children(node):
 print_tree(root, attrgetter('value'), children, preorder)
 print_tree(root, attrgetter('value'), children, postorder)
 print_tree(root, attrgetter('value'), children, levelorder)
+
+# Of course you can always transform a functional design into an OO design
+# if you really want to:
+
+class TreeBase(ABC):
+    @abstractmethod
+    def root(self): pass
+        
+    @abstractmethod
+    def children(self, node): pass
+
+    @abstractmethod
+    def value(self, node): pass
+            
+    def postorder(self):
+        def _postorder(node):
+            for child in self.children(node):
+                yield from _postorder(child)
+            yield node
+        yield from _postorder(self.root())
+
+    def preorder(self):
+        s = [self.root()]
+        while s:
+            node = s.pop()
+            yield node
+            s.extend(reversed(list(self.children(node))))
+        
+    def levelorder(self):
+        q = collections.deque([self.root()])
+        while q:
+            node = q.popleft()
+            yield node
+            q.extend(self.children(node))
+
+def print_tree(tree, traverser):
+    for node in traverser():
+        print(tree.value(node), end=' ')
+    print()
+
+class NodeTree(TreeBase):
+    def __init__(self, value, first_child, next_sibling):
+        self._value = value
+        self._first_child = first_child
+        self._next_sibling = next_sibling
+    def root(self):
+        return self
+    def children(self, node):
+        node = node._first_child
+        while node:
+            yield node
+            node = node._next_sibling
+    def value(self, node):
+        return node._value
+
+node3 = NodeTree(3, None, None)
+node5 = NodeTree(5, None, None)
+node4 = NodeTree(4, None, node5)
+node2 = NodeTree(2, node4, node3)
+root = NodeTree(1, node2, None)
+print_tree(root, root.levelorder)
+
+# And you can also wrap up existing tree types in the new API:
+class TupleTree(TreeBase):
+    def __init__(self, tup):
+        self.tup = tup
+    def root(self):
+        return self.tup
+    def children(self, node):
+        return node[1]
+    def value(self, node):
+        return node[0]
+
+t1 = TupleTree(simpletree)
+print_tree(t1, t1.levelorder)
+
+# But ultimately, I'm not sure how much this gets you, for the
+# extra work.
